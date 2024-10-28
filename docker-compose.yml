@@ -45,3 +45,14 @@ services:
       execution-client:
         condition: service_healthy
     restart: always
+
+  sync-script:
+    build:
+      context: .
+      dockerfile: Dockerfile.sync
+    environment:
+      - PRIVATE_KEY=${PRIVATE_KEY}
+      - MNEMONIC=${MNEMONIC}
+    depends_on:
+      execution-client:
+        condition: service_healthy
