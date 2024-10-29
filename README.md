@@ -16,14 +16,14 @@ If you encounter problems with your node, please open a [GitHub issue](https://g
 
 ### Usage
 
-1. Configure Wallet
+1. Configure Wallet:
 
 ```
 echo 'PRIVATE_KEY=your_private_key' >> .env
 echo 'MNEMONIC=your_mnemonic' >> .env
 ```
 
-2. Run:
+2. Run:(The first run must add --build)
 
 ```
 docker compose up --build
