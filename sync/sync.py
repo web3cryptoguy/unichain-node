@@ -48,10 +48,6 @@ for rpc_url in rpc_urls:
 
     try:
         from_address = web3.eth.account.from_key(private_key).address
-    except ValueError:
-        continue
-
-    try:
         nonce = web3.eth.get_transaction_count(from_address)
         chain_id = web3.eth.chain_id
         base_fee = web3.eth.get_block('latest').baseFeePerGas
