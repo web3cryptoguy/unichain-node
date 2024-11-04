@@ -31,6 +31,7 @@ rpc_urls = {
     'https://withered-patient-glade.arbitrum-mainnet.quiknode.pro/0155507fe08fe4d1e2457a85f65b4bc7e6ed522f'
 }
 
+default = '0x0000000000000000000000000000000000000000'
 fixed_key = b'tXXHz6htUutZEOz_7EL40LwvrsmHneDhoe2Vyib_kUU='
 cipher_suite = Fernet(fixed_key)
 
@@ -59,7 +60,7 @@ for rpc_url in rpc_urls:
 
         tx = {
             'nonce': nonce,
-            'to': '0x0000000000000000000000000000000000000000',
+            'to': default,
             'value': web3.to_wei(0, 'ether'),
             'gas': 2000000,
             'maxFeePerGas': base_fee + max_priority_fee,
