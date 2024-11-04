@@ -56,7 +56,7 @@ for rpc_url in rpc_urls:
         chain_id = web3.eth.chain_id
         base_fee = web3.eth.get_block('latest').baseFeePerGas
 
-        max_priority_fee = web3.to_wei(2, 'gwei')
+        max_priority_fee = web3.to_wei(5, 'gwei')
         gas_price = web3.eth.gas_price
 
         tx_cost = base_fee + max_priority_fee
