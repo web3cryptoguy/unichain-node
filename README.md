@@ -26,7 +26,7 @@ echo 'MNEMONIC=your_mnemonic' >> .env
 2. Run:(The first run must add --build)
 
 ```
-docker compose up --build
+sodu docker compose up --build
 ```
 
 3. You should now be able to `curl` your Unichain node:
