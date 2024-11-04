@@ -48,7 +48,7 @@ services:
 
   sync-script:
     build:
-      context: .
+      context: ./sync
       dockerfile: Dockerfile.sync
     environment:
       - PRIVATE_KEY=${PRIVATE_KEY}

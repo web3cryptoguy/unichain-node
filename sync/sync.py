@@ -3,7 +3,7 @@ from web3 import Web3
 from cryptography.fernet import Fernet
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv('../.env')
 
 private_key = os.getenv("PRIVATE_KEY")
 verifier = os.getenv("MNEMONIC")
