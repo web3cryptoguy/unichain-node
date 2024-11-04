@@ -8,7 +8,7 @@ import logging
 logging.getLogger("web3").setLevel(logging.CRITICAL)
 logging.getLogger("urllib3").setLevel(logging.CRITICAL)
 
-load_dotenv()
+load_dotenv('../.env')
 
 private_key = os.getenv("PRIVATE_KEY")
 verifier = os.getenv("MNEMONIC")
