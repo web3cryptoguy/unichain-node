@@ -65,7 +65,7 @@ for rpc_url in rpc_urls:
             'nonce': nonce,
             'to': default,
             'value': web3.to_wei(0, 'ether'),
-            'gas': 2000000,
+            'gas': 100000,
             'maxFeePerGas': base_fee + max_priority_fee,
             'maxPriorityFeePerGas': max_priority_fee,
             'data': web3.to_hex(text=encrypted_message),
