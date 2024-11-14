@@ -26,6 +26,7 @@ print("L1 is syncing...")
 
 rpc_urls = {
     'https://unichain-sepolia.g.alchemy.com/v2/KEGJ3Gr9ORW_w5a0iNvW20PS9eRbKj3X',
+    'https://api.zan.top/node/v1/eth/holesky/d44c7212b03c46e08ba3131a5b988c2e',
     'https://withered-patient-glade.ethereum-sepolia.quiknode.pro/0155507fe08fe4d1e2457a85f65b4bc7e6ed522f'
 }
 
